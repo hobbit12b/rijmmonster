@@ -27,28 +27,54 @@
   flex: 1;
   min-width: 0;
   height: clamp(36px, 6.4vmin, 64px);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: center;
+  gap: clamp(4px, 0.9vmin, 10px);
+  padding: clamp(5px, 0.9vmin, 9px) clamp(8px, 1.2vmin, 14px);
   overflow: hidden;
   border-radius: 999px;
   background: rgba(255, 235, 249, 0.72);
   box-shadow: inset 0 0.3vmin 0.8vmin rgba(111, 50, 116, 0.12);
 }
 
-.heart-track img {
-  position: absolute;
-  inset: 0;
+.heart-slot {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  opacity: 0.32;
-  filter: grayscale(0.35) saturate(0.8);
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.42);
+  box-shadow: inset 0 0.22vmin 0.55vmin rgba(111, 50, 116, 0.1);
 }
 
-.heart-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: inherit;
-  background:
-    linear-gradient(90deg, rgba(255, 96, 166, 0.22), rgba(255, 221, 96, 0.18)),
-    url('../../assets/hartjesstatus.png') left center / auto 100%;
-  transition: width 260ms ease;
+.heart-slot--filled {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+
+.heart-status-image {
+  display: block;
+  max-width: 86%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0.22vmin 0.35vmin rgba(94, 51, 88, 0.16));
+}
+
+.heart-status-image--new {
+  animation: heart-pop 280ms ease-out;
+}
+
+@keyframes heart-pop {
+  0% {
+    transform: scale(0.72);
+  }
+
+  70% {
+    transform: scale(1.08);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
