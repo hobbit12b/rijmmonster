@@ -27,18 +27,6 @@
   z-index: 0;
 }
 
-.ground-shadow {
-  position: absolute;
-  left: 10%;
-  right: 10%;
-  bottom: 12.5%;
-  height: 13%;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(121, 95, 112, 0.22) 0%, rgba(121, 95, 112, 0.08) 45%, transparent 72%);
-  filter: blur(0.3vmin);
-  z-index: 1;
-}
-
 .corner-button {
   position: absolute;
   top: 3.2%;
@@ -74,7 +62,7 @@
 
 .play-area {
   position: absolute;
-  inset: 28% 4% 16%;
+  inset: 29% 4% 15%;
   z-index: 3;
   display: grid;
   place-items: end center;
@@ -83,9 +71,9 @@
 
 .answer-row {
   position: absolute;
-  left: 4%;
-  right: 4%;
-  bottom: 4%;
+  left: 18.5%;
+  right: 18.5%;
+  bottom: -0.2%;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;

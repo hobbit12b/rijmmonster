@@ -1,6 +1,6 @@
 .answer-button {
   position: relative;
-  width: clamp(138px, 22%, 230px);
+  width: clamp(170px, 27.5%, 292px);
   aspect-ratio: 1;
   border: 0;
   padding: 0;
@@ -8,20 +8,20 @@
   cursor: pointer;
   pointer-events: auto;
   transform-origin: 50% 96%;
-  transition: transform 145ms ease, filter 145ms ease, opacity 145ms ease;
+  transition: transform 180ms ease, filter 180ms ease, opacity 180ms ease;
 }
 
 .answer-button::after {
   content: '';
   position: absolute;
-  left: 13%;
-  right: 13%;
-  bottom: 1%;
-  height: 8%;
+  left: 14%;
+  right: 14%;
+  bottom: 0.5%;
+  height: 9%;
   z-index: 0;
   border-radius: 50%;
-  background: rgba(87, 65, 84, 0.2);
-  filter: blur(0.4vmin);
+  background: rgba(87, 65, 84, 0.22);
+  filter: blur(0.45vmin);
 }
 
 .answer-button img {
@@ -49,6 +49,11 @@
   cursor: default;
 }
 
+.answer-button--speaking {
+  animation: speaking-pop 760ms ease-in-out infinite alternate;
+  filter: brightness(1.06) saturate(1.08);
+}
+
 .answer-button--correct {
   animation: correct-pop 620ms ease;
 }
@@ -57,30 +62,74 @@
   animation: gentle-wobble 620ms ease;
 }
 
-.answer-number,
-.debug-label {
+.button-sparkles {
   position: absolute;
-  z-index: 2;
-  left: 50%;
-  transform: translateX(-50%);
-  color: #6e2b85;
-  text-shadow: 0 0.2vmin 0 rgba(255, 255, 255, 0.8);
+  inset: 4% -7% auto;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  color: #fffaf1;
+  font-size: clamp(1.2rem, 2.5vmin, 2rem);
+  line-height: 1;
+  opacity: 0;
+  text-shadow:
+    0 0 0.35rem rgba(255, 255, 255, 0.95),
+    0 0 0.75rem rgba(255, 218, 84, 0.85),
+    0 0 1.1rem rgba(185, 83, 255, 0.75);
   pointer-events: none;
 }
 
-.answer-number {
-  top: 32%;
-  font-size: clamp(2.2rem, 5vmin, 4.4rem);
-  font-weight: 900;
+.answer-button::before {
+  content: '✦';
+  position: absolute;
+  right: 4%;
+  bottom: 17%;
+  z-index: 3;
+  color: #fffdf3;
+  font-size: clamp(1rem, 2vmin, 1.7rem);
+  opacity: 0.78;
+  text-shadow: 0 0 0.65rem rgba(255, 222, 89, 0.9), 0 0 1rem rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+  animation: tiny-twinkle 1.8s ease-in-out infinite alternate;
 }
 
-.debug-label {
-  bottom: 20%;
-  padding: 0.18em 0.5em;
-  border-radius: 999px;
-  font-size: clamp(0.78rem, 1.65vmin, 1.08rem);
-  font-weight: 800;
-  background: rgba(255, 255, 255, 0.68);
+.answer-button--speaking .button-sparkles,
+.answer-button:not(:disabled):hover .button-sparkles,
+.answer-button:not(:disabled):focus-visible .button-sparkles {
+  opacity: 1;
+  animation: sparkle-dance 760ms ease-in-out infinite alternate;
+}
+
+@keyframes speaking-pop {
+  from {
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    transform: translateY(-2.2%) scale(1.075);
+  }
+}
+
+@keyframes sparkle-dance {
+  from {
+    transform: translateY(0) rotate(-4deg) scale(0.96);
+  }
+
+  to {
+    transform: translateY(-8%) rotate(5deg) scale(1.07);
+  }
+}
+
+@keyframes tiny-twinkle {
+  from {
+    transform: scale(0.86) rotate(-8deg);
+    opacity: 0.48;
+  }
+
+  to {
+    transform: scale(1.1) rotate(8deg);
+    opacity: 0.9;
+  }
 }
 
 @keyframes correct-pop {

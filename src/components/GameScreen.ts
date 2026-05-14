@@ -6,7 +6,6 @@ import { InstructionBar } from './InstructionBar.js';
 import { Monster, type MonsterPose } from './Monster.js';
 import { ProgressBar } from './ProgressBar.js';
 
-const SHOW_DEBUG_LABELS = true;
 const LISTENING_GAP_MS = 420;
 const FEEDBACK_MS = 620;
 const NEXT_ROUND_DELAY_MS = 120;
@@ -22,6 +21,7 @@ export class GameScreen {
   private monsterPose: MonsterPose = 'idle';
   private isPlayingAudio = false;
   private selectedAnswer: number | null = null;
+  private activeSpokenOption: number | null = null;
   private feedback: Feedback = null;
 
   constructor(root: HTMLElement) {
@@ -59,7 +59,18 @@ export class GameScreen {
   private finishListening() {
     this.setState(() => {
       this.isPlayingAudio = false;
+      this.activeSpokenOption = null;
       this.monsterPose = 'idle';
+    });
+  }
+
+  private speakQuestion() {
+    this.setState(() => {
+      this.activeSpokenOption = null;
+    });
+
+    this.speech.speak(`Welk woord klinkt hetzelfde aan het eind als ${this.task.prompt}?`, {
+      onEnd: () => this.queueTimer(() => this.speakOptionsFrom(0), LISTENING_GAP_MS),
     });
   }
 
@@ -71,41 +82,47 @@ export class GameScreen {
       return;
     }
 
-    this.speech.speak(option.label, {
+    this.setState(() => {
+      this.activeSpokenOption = index;
+    });
+
+    const optionText = index === 0 ? `${this.task.prompt} ${option.label}` : `of ${this.task.prompt} ${option.label}`;
+
+    this.speech.speak(optionText, {
       onEnd: () => this.queueTimer(() => this.speakOptionsFrom(index + 1), LISTENING_GAP_MS),
     });
   }
+
+  private playFullPrompt = () => {
+    this.speech.speak(this.task.prompt, {
+      onEnd: () => this.queueTimer(() => this.speakQuestion(), LISTENING_GAP_MS),
+    });
+  };
 
   private playRoundAudio = () => {
     this.clearTimers();
     this.setState(() => {
       this.feedback = null;
       this.selectedAnswer = null;
+      this.activeSpokenOption = null;
       this.isPlayingAudio = true;
       this.monsterPose = 'listening';
     });
 
-    this.speech.speak(this.task.prompt, {
-      onEnd: () => this.queueTimer(() => this.speakOptionsFrom(0), LISTENING_GAP_MS),
-    });
+    this.playFullPrompt();
   };
-
 
   private replayPrompt = () => {
     this.clearTimers();
     this.setState(() => {
+      this.feedback = null;
+      this.selectedAnswer = null;
+      this.activeSpokenOption = null;
       this.isPlayingAudio = true;
       this.monsterPose = 'listening';
     });
 
-    this.speech.speak(this.task.prompt, {
-      onEnd: () => {
-        this.setState(() => {
-          this.isPlayingAudio = false;
-          this.monsterPose = 'idle';
-        });
-      },
-    });
+    this.playFullPrompt();
   };
 
   private chooseAnswer(index: number) {
@@ -119,6 +136,7 @@ export class GameScreen {
     this.clearTimers();
     this.setState(() => {
       this.selectedAnswer = index;
+      this.activeSpokenOption = null;
       this.feedback = isCorrect ? 'correct' : 'wrong';
       this.monsterPose = isCorrect ? 'happy' : 'oops';
       this.isPlayingAudio = true;
@@ -134,6 +152,7 @@ export class GameScreen {
               this.taskIndex = (this.taskIndex + 1) % gameData.length;
               this.feedback = null;
               this.selectedAnswer = null;
+              this.activeSpokenOption = null;
               this.monsterPose = 'idle';
               this.isPlayingAudio = false;
             });
@@ -142,6 +161,7 @@ export class GameScreen {
             this.setState(() => {
               this.feedback = null;
               this.selectedAnswer = null;
+              this.activeSpokenOption = null;
               this.monsterPose = 'idle';
               this.isPlayingAudio = false;
             });
@@ -155,7 +175,6 @@ export class GameScreen {
   private render() {
     const stage = createElement('div', 'game-stage');
     stage.append(createImage('/assets/achtergrond.png', '', 'background-layer'));
-    stage.append(createElement('div', 'ground-shadow'));
 
     const homeButton = createElement('button', 'corner-button corner-button--home');
     homeButton.type = 'button';
@@ -170,14 +189,14 @@ export class GameScreen {
     const playArea = createElement('div', 'play-area');
     playArea.setAttribute('aria-live', 'polite');
 
-    const answerRow = createElement('div', 'answer-row answer-row--top');
+    const answerRow = createElement('div', 'answer-row');
     this.task.options.forEach((option, index) => {
       answerRow.append(
         AnswerButton({
           option,
           index,
           disabled: this.roundLocked,
-          showDebugLabel: SHOW_DEBUG_LABELS,
+          isSpeaking: this.activeSpokenOption === index,
           feedback: this.selectedAnswer === index ? this.feedback : null,
           onChoose: () => this.chooseAnswer(index),
         }),
