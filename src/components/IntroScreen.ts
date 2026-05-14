@@ -1,4 +1,5 @@
 import {
+  BACKGROUND_MUSIC_VOLUME,
   BG_MUSIC_SRC,
   INTRO_AUDIO_SRC,
   audioManager,
@@ -7,7 +8,7 @@ import {
 } from '../audio.js';
 import { createElement, createImage } from '../dom.js';
 
-const START_FALLBACK_DELAY_MS = 350;
+const START_FALLBACK_DELAY_MS = 1200;
 const INTRO_BACKGROUND_SRC = '/assets/introscherm_zonder_startknop.png';
 const INTRO_START_BUTTON_SRC = '/assets/introscherm_startknop.png';
 
@@ -16,9 +17,9 @@ type IntroScreenProps = {
 };
 
 export function IntroScreen({ onStart }: IntroScreenProps) {
-  console.log('Intro screen mounted');
-  console.log('Intro audio path', INTRO_AUDIO_SRC);
-  console.log('Background music path', BG_MUSIC_SRC);
+  console.log('IntroScreen mounted');
+  console.log('INTRO_AUDIO_SRC', INTRO_AUDIO_SRC);
+  console.log('BG_MUSIC_SRC', BG_MUSIC_SRC);
 
   let hasStartedGame = false;
   let introStarted = false;
@@ -29,9 +30,10 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
       return;
     }
 
-    console.log('Intro audio ended, navigating to game');
+    console.log('intro ended, navigating to game');
     hasStartedGame = true;
     startButton.disabled = true;
+    audioManager.getBackgroundMusic().volume = BACKGROUND_MUSIC_VOLUME;
     unsubscribeIntroEnded();
     onStart();
   };
@@ -58,13 +60,14 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
     audioManager.duckMusic('intro-explanation');
     try {
       await audioManager.playBackgroundMusic();
+      console.log('background music started');
     } catch (error) {
-      console.warn('Background music could not play', error);
+      console.warn('background music could not start', error);
     }
   };
 
   async function handleStart() {
-    console.log('Start button clicked');
+    console.log('start clicked');
 
     if (introStarted || audioManager.isIntroPlaying()) {
       return;
@@ -81,15 +84,15 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
     await startBackgroundMusicSoftly();
 
     try {
-      console.log('Intro audio play called');
       await introAudio.play();
+      console.log('intro audio started');
     } catch (error) {
       audioManager.setIntroPlaying(false);
       audioManager.restoreMusicVolume('intro-explanation');
       introStarted = false;
 
       if (isAutoplayBlockedError(error)) {
-        console.log('Autoplay blocked, waiting for start button');
+        console.log('autoplay blocked, waiting for start');
         showStartButton();
         return;
       }
@@ -140,7 +143,7 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
       }
 
       if (audioManager.state.autoplayBlocked) {
-        console.log('Autoplay blocked, waiting for start button');
+        console.log('autoplay blocked, waiting for start');
         showStartButton();
         return;
       }
@@ -153,7 +156,7 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
       }
     }).catch((error) => {
       if (isAutoplayBlockedError(error)) {
-        console.log('Autoplay blocked, waiting for start button');
+        console.log('autoplay blocked, waiting for start');
         showStartButton();
         return;
       }

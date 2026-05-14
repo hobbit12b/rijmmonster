@@ -156,14 +156,17 @@ class AudioManager {
     const intro = this.getIntroAudio();
 
     try {
+      intro.currentTime = 0;
       this.duckMusic('intro-explanation');
-      console.log('Intro audio play called');
       await intro.play();
+      console.log('intro audio started');
       this.state.audioUnlocked = true;
       this.state.autoplayBlocked = false;
       this.state.introUnavailable = false;
       this.state.introPlaying = true;
-      void this.playBackgroundMusic().catch(() => {
+      void this.playBackgroundMusic().then(() => {
+        console.log('background music started');
+      }).catch(() => {
         // Intro may autoplay while music is blocked independently on some browsers.
       });
       this.emitState();
@@ -173,7 +176,7 @@ class AudioManager {
       this.state.autoplayBlocked = isAutoplayBlockedError(error);
       this.state.introUnavailable = isAudioSourceUnavailable(intro, error);
       if (isAutoplayBlockedError(error)) {
-        console.log('Autoplay blocked, waiting for start button');
+        console.log('autoplay blocked, waiting for start');
       } else {
         this.warnMissingOrInvalid(this.getAudio('intro'), error);
       }
@@ -227,7 +230,7 @@ class AudioManager {
 
     try {
       await intro.play();
-      console.log('Intro audio play called');
+      console.log('intro audio started');
       this.state.introPlaying = true;
       this.emitState();
     } catch (error) {
@@ -254,7 +257,7 @@ class AudioManager {
 
     try {
       await music.play();
-      console.log('Background music play called');
+      console.log('background music started');
       this.state.musicPlaying = true;
       this.emitState();
     } catch (error) {
@@ -425,7 +428,7 @@ class AudioManager {
         }
       });
       element.addEventListener('ended', () => {
-        console.log('Intro audio ended');
+        console.log('intro ended, navigating to game');
         this.state.introPlaying = false;
         this.state.introPlayed = true;
         this.restoreMusicVolume('intro-explanation');
