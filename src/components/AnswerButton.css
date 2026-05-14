@@ -1,0 +1,109 @@
+.answer-button {
+  position: relative;
+  width: clamp(138px, 22%, 230px);
+  aspect-ratio: 1;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  transform-origin: 50% 96%;
+  transition: transform 145ms ease, filter 145ms ease, opacity 145ms ease;
+}
+
+.answer-button::after {
+  content: '';
+  position: absolute;
+  left: 13%;
+  right: 13%;
+  bottom: 1%;
+  height: 8%;
+  z-index: 0;
+  border-radius: 50%;
+  background: rgba(87, 65, 84, 0.2);
+  filter: blur(0.4vmin);
+}
+
+.answer-button img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0.8vmin 0.9vmin rgba(81, 48, 82, 0.16));
+  user-select: none;
+}
+
+.answer-button:not(:disabled):hover,
+.answer-button:not(:disabled):focus-visible {
+  transform: translateY(-1.4%) scale(1.035);
+  outline: none;
+}
+
+.answer-button:not(:disabled):active {
+  transform: scale(0.95);
+}
+
+.answer-button:disabled {
+  cursor: default;
+}
+
+.answer-button--correct {
+  animation: correct-pop 620ms ease;
+}
+
+.answer-button--wrong {
+  animation: gentle-wobble 620ms ease;
+}
+
+.answer-number,
+.debug-label {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #6e2b85;
+  text-shadow: 0 0.2vmin 0 rgba(255, 255, 255, 0.8);
+  pointer-events: none;
+}
+
+.answer-number {
+  top: 32%;
+  font-size: clamp(2.2rem, 5vmin, 4.4rem);
+  font-weight: 900;
+}
+
+.debug-label {
+  bottom: 20%;
+  padding: 0.18em 0.5em;
+  border-radius: 999px;
+  font-size: clamp(0.78rem, 1.65vmin, 1.08rem);
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+@keyframes correct-pop {
+  0%, 100% {
+    transform: scale(1);
+  }
+
+  36% {
+    transform: translateY(-3%) scale(1.09);
+    filter: brightness(1.08);
+  }
+}
+
+@keyframes gentle-wobble {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+
+  25% {
+    transform: rotate(-3deg) scale(0.99);
+  }
+
+  55% {
+    transform: rotate(3deg) scale(0.99);
+  }
+}
