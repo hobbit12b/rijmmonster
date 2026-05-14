@@ -1,5 +1,5 @@
-import type { RhymeTask } from '../data/gameData';
-import { createElement, createImage } from '../dom';
+import type { RhymeTask } from '../data/gameData.js';
+import { createElement, createImage } from '../dom.js';
 
 type InstructionBarProps = {
   task: RhymeTask;

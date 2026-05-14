@@ -1,5 +1,5 @@
-import type { AnswerOption } from '../data/gameData';
-import { createElement, createImage } from '../dom';
+import type { AnswerOption } from '../data/gameData.js';
+import { createElement, createImage } from '../dom.js';
 
 type AnswerButtonProps = {
   option: AnswerOption;
