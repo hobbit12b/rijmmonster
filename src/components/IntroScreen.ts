@@ -1,20 +1,19 @@
-import { duckBackgroundMusic, restoreBackgroundMusic, startBackgroundMusic } from '../audio.js';
+import { attemptAutoplayIntro, audioManager, playBackgroundMusic, unlockAudio } from '../audio.js';
 import { createElement, createImage } from '../dom.js';
+
+function isAutoplayBlocked(error: unknown) {
+  return error instanceof DOMException && error.name === 'NotAllowedError';
+}
 
 type IntroScreenProps = {
   onStart: () => void;
 };
 
-const INTRO_DUCK_REASON = 'intro-explanation';
-
 export function IntroScreen({ onStart }: IntroScreenProps) {
   let hasStartedGame = false;
-  let hasStartedIntro = false;
-  let hasFinishedIntro = false;
-
-  const introAudio = document.createElement('audio');
-  introAudio.src = 'assets/uitleg.mp3';
-  introAudio.preload = 'auto';
+  let isStartingFromButton = false;
+  let unsubscribeState: () => void = () => undefined;
+  let unsubscribeIntroEnded: () => void = () => undefined;
 
   const continueToGame = () => {
     if (hasStartedGame) {
@@ -22,94 +21,85 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
     }
 
     hasStartedGame = true;
-    restoreBackgroundMusic(INTRO_DUCK_REASON);
+    unsubscribeState();
+    unsubscribeIntroEnded();
     onStart();
-  };
-
-  const playIntroAudio = () => {
-    if (hasFinishedIntro) {
-      continueToGame();
-      return Promise.resolve();
-    }
-
-    hasStartedIntro = true;
-    duckBackgroundMusic(INTRO_DUCK_REASON);
-    return introAudio.play().catch((error: unknown) => {
-      restoreBackgroundMusic(INTRO_DUCK_REASON);
-      throw error;
-    });
-  };
-
-  const startIntro = () => {
-    const musicPromise = startBackgroundMusic();
-    const introPromise = playIntroAudio();
-
-    void Promise.all([musicPromise, introPromise])
-      .then(() => {
-        hint.textContent = 'Luister naar Rijmie. Het spel start zo vanzelf.';
-      })
-      .catch(() => {
-        hasStartedIntro = false;
-        hint.textContent = 'Tik op Start spel om het geluid te starten.';
-      });
   };
 
   const shell = createElement('main', 'game-shell');
   const stage = createElement('section', 'game-stage intro-stage');
   stage.setAttribute('aria-label', 'Introductie');
-  stage.append(createImage('/assets/achtergrond.png', '', 'background-layer'));
+  stage.append(createImage('/assets/introscherm.png', '', 'intro-background-layer'));
 
-  const card = createElement('div', 'intro-card');
+  const overlay = createElement('div', 'intro-controls');
 
-  const monster = createElement('div', 'intro-monster');
-  monster.append(createImage('/assets/monster.png', 'Rijmie het rijmmonster'));
+  const loader = createElement('div', 'intro-loader');
+  loader.setAttribute('aria-label', 'Audio laden');
+  loader.setAttribute('role', 'status');
 
-  const copy = createElement('div', 'intro-copy');
-  copy.append(
-    createElement('p', 'intro-eyebrow', 'Hallo, ik ben Rijmie!'),
-    createElement('h1', undefined, 'Luister en rijm mee'),
-    createElement('p', undefined, 'Ik leg kort uit hoe je woorden vindt die aan het eind hetzelfde klinken.'),
-  );
+  const loaderDot = createElement('span', 'intro-loader-dot');
+  loader.append(loaderDot);
 
-  const startButton = createElement('button', 'intro-start-button', 'Start spel');
+  const startButton = createElement('button', 'intro-start-button', 'start');
   startButton.type = 'button';
+  startButton.disabled = true;
+  startButton.hidden = true;
   startButton.addEventListener('click', () => {
-    if (hasFinishedIntro) {
+    if (isStartingFromButton || startButton.disabled) {
+      return;
+    }
+
+    isStartingFromButton = true;
+    startButton.disabled = true;
+    startButton.hidden = true;
+    loader.hidden = false;
+
+    void unlockAudio()
+      .then(() => playBackgroundMusic().catch(() => undefined))
+      .catch((error: unknown) => {
+        // Safari/iPad may still block audio. Keep the screen stable and allow another
+        // explicit tap without showing a technical error to children. Missing audio files
+        // are already warned by AudioManager; in that case continue so the app never crashes.
+        if (!isAutoplayBlocked(error)) {
+          continueToGame();
+          return;
+        }
+
+        isStartingFromButton = false;
+        startButton.disabled = false;
+        startButton.hidden = false;
+        loader.hidden = true;
+      });
+  });
+
+  overlay.append(loader, startButton);
+  stage.append(overlay);
+  shell.append(createElement('div', 'portrait-warning', 'Draai de iPad naar liggend beeld om Rijmmonster te spelen.'), stage);
+
+  unsubscribeState = audioManager.subscribe((state) => {
+    if (state.introPlayed) {
       continueToGame();
       return;
     }
 
-    startIntro();
-  });
-
-  const hint = createElement('p', 'intro-hint', 'Luister naar Rijmie. Het spel start daarna vanzelf.');
-
-  introAudio.addEventListener('ended', () => {
-    hasFinishedIntro = true;
-    continueToGame();
-  });
-
-  introAudio.addEventListener('pause', () => {
-    if (!hasFinishedIntro && !hasStartedGame) {
-      restoreBackgroundMusic(INTRO_DUCK_REASON);
+    if (state.introPlaying) {
+      startButton.hidden = true;
+      startButton.disabled = true;
+      loader.hidden = true;
+      return;
     }
+
+    const canStartByButton = state.introLoaded && state.autoplayBlocked && !isStartingFromButton;
+    startButton.hidden = !canStartByButton;
+    startButton.disabled = !canStartByButton;
+    loader.hidden = state.introLoaded || state.introPlaying;
   });
 
-  introAudio.addEventListener('play', () => {
-    if (!hasFinishedIntro && !hasStartedGame) {
-      duckBackgroundMusic(INTRO_DUCK_REASON);
-    }
-  });
-
-  card.append(monster, copy, startButton, hint, introAudio);
-  stage.append(card);
-  shell.append(createElement('div', 'portrait-warning', 'Draai de iPad naar liggend beeld om Rijmmonster te spelen.'), stage);
+  unsubscribeIntroEnded = audioManager.onIntroEnded(continueToGame);
 
   window.setTimeout(() => {
-    if (!hasStartedIntro) {
-      startIntro();
-    }
-  }, 150);
+    void attemptAutoplayIntro();
+  }, 0);
 
   return shell;
 }

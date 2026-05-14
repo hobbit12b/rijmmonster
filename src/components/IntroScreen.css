@@ -1,117 +1,89 @@
 .intro-stage {
   display: grid;
   place-items: center;
+  background: #f9dff4;
 }
 
-.intro-card {
-  position: relative;
+.intro-background-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.intro-controls {
+  position: absolute;
+  inset: auto 0 8%;
   z-index: 2;
-  width: min(84%, 760px);
-  min-height: 72%;
-  display: grid;
-  grid-template-columns: minmax(210px, 0.82fr) 1fr;
-  grid-template-areas:
-    'monster copy'
-    'monster button'
-    'monster hint';
-  align-items: center;
-  gap: 1.6vmin 4vmin;
-  padding: clamp(1.4rem, 4vmin, 3rem);
-  border: 0.45vmin solid rgba(255, 255, 255, 0.9);
-  border-radius: clamp(1.5rem, 5vmin, 3.75rem);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(255, 239, 249, 0.92));
-  box-shadow: 0 2vmin 5vmin rgba(96, 51, 118, 0.22);
-}
-
-.intro-monster {
-  grid-area: monster;
   display: grid;
   place-items: center;
-}
-
-.intro-monster img {
-  width: min(100%, 38vmin);
-  max-height: 56vmin;
-  object-fit: contain;
-  filter: drop-shadow(0 1.5vmin 1.5vmin rgba(92, 48, 112, 0.2));
-}
-
-.intro-copy {
-  grid-area: copy;
-  align-self: end;
-  color: #65327d;
-}
-
-.intro-copy h1 {
-  margin: 0;
-  color: #8a4aa8;
-  font-size: clamp(2.2rem, 6vmin, 5rem);
-  line-height: 0.95;
-  text-shadow: 0 0.28vmin 0 #fff;
-}
-
-.intro-copy p {
-  margin: 1.1vmin 0 0;
-  font-size: clamp(1.05rem, 2.45vmin, 1.6rem);
-  font-weight: 800;
-  line-height: 1.25;
-}
-
-.intro-copy .intro-eyebrow {
-  margin: 0 0 0.8vmin;
-  color: #ff5aa7;
-  font-size: clamp(1rem, 2.2vmin, 1.45rem);
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  pointer-events: none;
 }
 
 .intro-start-button {
-  grid-area: button;
-  justify-self: start;
-  min-width: min(100%, 15rem);
+  min-width: min(46%, 15rem);
   border: 0;
   border-radius: 999px;
-  padding: 0.85rem 2.1rem 0.95rem;
+  padding: 0.85rem 2.3rem 0.95rem;
   color: #fff;
-  font-size: clamp(1.25rem, 3vmin, 2rem);
+  font-size: clamp(1.35rem, 3.4vmin, 2.15rem);
   font-weight: 900;
+  line-height: 1;
+  text-transform: lowercase;
   background: linear-gradient(180deg, #ff7fc1, #e8469d);
-  box-shadow: 0 0.7vmin 0 #b8287d, 0 1.2vmin 2.2vmin rgba(126, 52, 123, 0.22);
+  box-shadow: 0 0.7vmin 0 #b8287d, 0 1.2vmin 2.2vmin rgba(126, 52, 123, 0.24);
   cursor: pointer;
-  transition: transform 140ms ease, box-shadow 140ms ease;
+  pointer-events: auto;
+  transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
 }
 
-.intro-start-button:active {
+.intro-start-button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+.intro-start-button:not(:disabled):active {
   transform: translateY(0.35vmin) scale(0.98);
   box-shadow: 0 0.35vmin 0 #b8287d, 0 0.8vmin 1.4vmin rgba(126, 52, 123, 0.2);
 }
 
-.intro-hint {
-  grid-area: hint;
-  align-self: start;
-  margin: 0;
-  color: #6f4f86;
-  font-size: clamp(0.95rem, 2vmin, 1.25rem);
-  font-weight: 800;
+.intro-loader {
+  display: grid;
+  place-items: center;
+  width: clamp(2.1rem, 6vmin, 3.75rem);
+  aspect-ratio: 1;
+}
+
+.intro-loader-dot {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, #fff7fb 0 16%, #ff82c5 17% 58%, #d9449d 59% 100%);
+  box-shadow: 0 0.5vmin 1.5vmin rgba(126, 52, 123, 0.24);
+  animation: intro-loader-pulse 850ms ease-in-out infinite;
+}
+
+@keyframes intro-loader-pulse {
+  0%,
+  100% {
+    transform: scale(0.82);
+    opacity: 0.62;
+  }
+
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @media (max-aspect-ratio: 1/1) {
-  .intro-card {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      'monster'
-      'copy'
-      'button'
-      'hint';
-    width: min(88%, 620px);
-    text-align: center;
+  .intro-controls {
+    bottom: 10%;
   }
 
   .intro-start-button {
-    justify-self: center;
-  }
-
-  .intro-monster img {
-    width: min(72%, 34vmin);
+    min-width: min(62%, 14rem);
   }
 }
