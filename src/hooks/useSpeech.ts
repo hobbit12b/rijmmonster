@@ -1,6 +1,7 @@
 export type SpeakOptions = {
   rate?: number;
   pitch?: number;
+  onStart?: () => void;
   onEnd?: () => void;
 };
 
@@ -14,6 +15,11 @@ export function createSpeechController() {
   let activeUtterance: SpeechSynthesisUtterance | null = null;
 
   function stop() {
+    if (activeUtterance) {
+      activeUtterance.onend = null;
+      activeUtterance.onerror = null;
+    }
+
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
@@ -22,6 +28,8 @@ export function createSpeechController() {
 
   function speak(text: string, options: SpeakOptions = {}) {
     stop();
+
+    options.onStart?.();
 
     if (!('speechSynthesis' in window)) {
       globalThis.setTimeout(() => options.onEnd?.(), 350);

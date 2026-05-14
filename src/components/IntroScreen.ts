@@ -1,21 +1,57 @@
+import { duckBackgroundMusic, restoreBackgroundMusic, startBackgroundMusic } from '../audio.js';
 import { createElement, createImage } from '../dom.js';
 
 type IntroScreenProps = {
   onStart: () => void;
 };
 
-export function IntroScreen({ onStart }: IntroScreenProps) {
-  let hasStarted = false;
+const INTRO_DUCK_REASON = 'intro-explanation';
 
-  const startGame = () => {
-    if (hasStarted) {
+export function IntroScreen({ onStart }: IntroScreenProps) {
+  let hasStartedGame = false;
+  let hasStartedIntro = false;
+  let hasFinishedIntro = false;
+
+  const introAudio = document.createElement('audio');
+  introAudio.src = 'assets/uitleg.mp3';
+  introAudio.preload = 'auto';
+
+  const continueToGame = () => {
+    if (hasStartedGame) {
       return;
     }
 
-    hasStarted = true;
-    introAudio.pause();
-    introAudio.currentTime = 0;
+    hasStartedGame = true;
+    restoreBackgroundMusic(INTRO_DUCK_REASON);
     onStart();
+  };
+
+  const playIntroAudio = () => {
+    if (hasFinishedIntro) {
+      continueToGame();
+      return Promise.resolve();
+    }
+
+    hasStartedIntro = true;
+    duckBackgroundMusic(INTRO_DUCK_REASON);
+    return introAudio.play().catch((error: unknown) => {
+      restoreBackgroundMusic(INTRO_DUCK_REASON);
+      throw error;
+    });
+  };
+
+  const startIntro = () => {
+    const musicPromise = startBackgroundMusic();
+    const introPromise = playIntroAudio();
+
+    void Promise.all([musicPromise, introPromise])
+      .then(() => {
+        hint.textContent = 'Luister naar Rijmie. Het spel start zo vanzelf.';
+      })
+      .catch(() => {
+        hasStartedIntro = false;
+        hint.textContent = 'Tik op Start spel om het geluid te starten.';
+      });
   };
 
   const shell = createElement('main', 'game-shell');
@@ -37,23 +73,42 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
 
   const startButton = createElement('button', 'intro-start-button', 'Start spel');
   startButton.type = 'button';
-  startButton.addEventListener('click', startGame);
+  startButton.addEventListener('click', () => {
+    if (hasFinishedIntro) {
+      continueToGame();
+      return;
+    }
 
-  const hint = createElement('p', 'intro-hint', 'Start zelf als het geluid niet automatisch begint.');
+    startIntro();
+  });
 
-  const introAudio = document.createElement('audio');
-  introAudio.src = 'assets/uitleg.mp3';
-  introAudio.preload = 'auto';
-  introAudio.addEventListener('ended', startGame);
+  const hint = createElement('p', 'intro-hint', 'Luister naar Rijmie. Het spel start daarna vanzelf.');
+
+  introAudio.addEventListener('ended', () => {
+    hasFinishedIntro = true;
+    continueToGame();
+  });
+
+  introAudio.addEventListener('pause', () => {
+    if (!hasFinishedIntro && !hasStartedGame) {
+      restoreBackgroundMusic(INTRO_DUCK_REASON);
+    }
+  });
+
+  introAudio.addEventListener('play', () => {
+    if (!hasFinishedIntro && !hasStartedGame) {
+      duckBackgroundMusic(INTRO_DUCK_REASON);
+    }
+  });
 
   card.append(monster, copy, startButton, hint, introAudio);
   stage.append(card);
   shell.append(createElement('div', 'portrait-warning', 'Draai de iPad naar liggend beeld om Rijmmonster te spelen.'), stage);
 
   window.setTimeout(() => {
-    void introAudio.play().catch(() => {
-      hint.textContent = 'Tik op Start spel om meteen te beginnen.';
-    });
+    if (!hasStartedIntro) {
+      startIntro();
+    }
   }, 150);
 
   return shell;

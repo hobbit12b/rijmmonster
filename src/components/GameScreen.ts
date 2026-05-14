@@ -1,3 +1,4 @@
+import { duckBackgroundMusic, restoreBackgroundMusic, startBackgroundMusic } from '../audio.js';
 import { gameData } from '../data/gameData.js';
 import { createElement, createImage } from '../dom.js';
 import { createSpeechController } from '../hooks/useSpeech.js';
@@ -9,6 +10,7 @@ import { ProgressBar } from './ProgressBar.js';
 const LISTENING_GAP_MS = 420;
 const FEEDBACK_MS = 620;
 const NEXT_ROUND_DELAY_MS = 120;
+const GAME_SPEECH_DUCK_REASON = 'game-speech';
 
 type Feedback = 'correct' | 'wrong' | null;
 
@@ -29,6 +31,10 @@ export class GameScreen {
   }
 
   mount() {
+    void startBackgroundMusic().catch(() => {
+      // The intro start button normally unlocks audio. If not, speech still works and
+      // another user gesture can resume the shared music instance later.
+    });
     this.render();
     window.setTimeout(() => this.playRoundAudio(), 200);
   }
@@ -64,12 +70,26 @@ export class GameScreen {
     });
   }
 
+  private speak(text: string, options: Parameters<typeof this.speech.speak>[1] = {}) {
+    this.speech.speak(text, {
+      ...options,
+      onStart: () => {
+        duckBackgroundMusic(GAME_SPEECH_DUCK_REASON);
+        options.onStart?.();
+      },
+      onEnd: () => {
+        restoreBackgroundMusic(GAME_SPEECH_DUCK_REASON);
+        options.onEnd?.();
+      },
+    });
+  }
+
   private speakQuestion() {
     this.setState(() => {
       this.activeSpokenOption = null;
     });
 
-    this.speech.speak('Wat rijmt?', {
+    this.speak('Wat rijmt?', {
       rate: 0.92,
       onEnd: () => this.queueTimer(() => this.speakOptionsFrom(0), LISTENING_GAP_MS),
     });
@@ -89,7 +109,7 @@ export class GameScreen {
 
     const optionText = `${this.task.prompt}, ${option.label}.`;
 
-    this.speech.speak(optionText, {
+    this.speak(optionText, {
       rate: 0.92,
       onEnd: () => this.queueTimer(() => this.speakOptionsFrom(index + 1), LISTENING_GAP_MS),
     });
@@ -133,6 +153,7 @@ export class GameScreen {
     const isCorrect = this.task.options[index].correct;
 
     this.speech.stop();
+    restoreBackgroundMusic(GAME_SPEECH_DUCK_REASON);
     this.clearTimers();
     this.setState(() => {
       this.selectedAnswer = index;
@@ -142,7 +163,7 @@ export class GameScreen {
       this.isPlayingAudio = true;
     });
 
-    this.speech.speak(isCorrect ? 'Goed zo!' : 'Bijna. Luister nog eens.', {
+    this.speak(isCorrect ? 'Goed zo!' : 'Bijna. Luister nog eens.', {
       rate: 0.88,
       onEnd: () => {
         this.queueTimer(() => {
