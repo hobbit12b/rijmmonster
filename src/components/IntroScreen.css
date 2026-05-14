@@ -39,3 +39,7 @@
 .intro-start-hit-area:disabled {
   cursor: default;
 }
+
+.intro-start-hit-area--debug {
+  border: 2px solid rgb(255 0 0 / 65%);
+}
