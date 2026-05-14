@@ -1,13 +1,11 @@
-export const INTRO_AUDIO_SRC = '/audio/intro-rijmen.mp3';
-export const BACKGROUND_MUSIC_SRC = '/audio/background-music.mp3';
-export const CORRECT_AUDIO_SRC = '/audio/correct.mp3';
-export const WRONG_AUDIO_SRC = '/audio/wrong-soft.mp3';
+export const INTRO_AUDIO_SRC = '/assets/intro-rijmen.mp3';
+export const BG_MUSIC_SRC = '/assets/background-music.mp3';
 
 export const BACKGROUND_MUSIC_VOLUME = 0.18;
 export const DUCKED_BACKGROUND_MUSIC_VOLUME = 0.08;
 
-type AudioKey = 'intro' | 'backgroundMusic' | 'correct' | 'wrong';
-type PlaybackAudioKey = Exclude<AudioKey, 'backgroundMusic'>;
+type AudioKey = 'intro' | 'backgroundMusic';
+type PlaybackAudioKey = 'intro';
 
 type ManagedAudio = {
   element: HTMLAudioElement;
@@ -36,9 +34,22 @@ type AudioManagerState = {
 
 const AUDIO_SOURCES: Record<AudioKey, { src: string; label: string }> = {
   intro: { src: INTRO_AUDIO_SRC, label: 'intro-audio' },
-  backgroundMusic: { src: BACKGROUND_MUSIC_SRC, label: 'achtergrondmuziek' },
-  correct: { src: CORRECT_AUDIO_SRC, label: 'correct-geluid' },
-  wrong: { src: WRONG_AUDIO_SRC, label: 'fout-geluid' },
+  backgroundMusic: { src: BG_MUSIC_SRC, label: 'achtergrondmuziek' },
+};
+
+const introAudioElement = new Audio(INTRO_AUDIO_SRC);
+console.log('intro audio created');
+introAudioElement.preload = 'auto';
+
+const backgroundMusicElement = new Audio(BG_MUSIC_SRC);
+console.log('background music created');
+backgroundMusicElement.preload = 'auto';
+backgroundMusicElement.loop = true;
+backgroundMusicElement.volume = BACKGROUND_MUSIC_VOLUME;
+
+const PRECREATED_AUDIO_ELEMENTS: Record<AudioKey, HTMLAudioElement> = {
+  intro: introAudioElement,
+  backgroundMusic: backgroundMusicElement,
 };
 
 const defaultVoiceSettings = {
@@ -77,6 +88,7 @@ class AudioManager {
 
   constructor() {
     this.attachLifecycleListeners();
+    this.preloadAudio();
   }
 
   subscribe(listener: (state: AudioManagerState) => void) {
@@ -99,11 +111,14 @@ class AudioManager {
   preloadAudio() {
     this.getAudio('intro');
     this.getAudio('backgroundMusic');
-    this.getAudio('correct');
-    this.getAudio('wrong');
 
     this.audio.forEach((managed) => {
       managed.element.preload = 'auto';
+      if (managed.src === BG_MUSIC_SRC) {
+        managed.element.loop = true;
+        managed.element.volume = BACKGROUND_MUSIC_VOLUME;
+      }
+
       try {
         managed.element.load();
       } catch (error) {
@@ -115,10 +130,19 @@ class AudioManager {
   async attemptAutoplayIntro() {
     this.preloadAudio();
 
+    if (this.state.introPlayed || this.state.introPlaying) {
+      return false;
+    }
+
+    const intro = this.getIntroAudio();
+    console.log('autoplay attempt');
+
     try {
-      await this.playIntroExplanation();
+      this.duckMusic('intro-explanation');
+      await intro.play();
       this.state.audioUnlocked = true;
       this.state.autoplayBlocked = false;
+      this.state.introPlaying = true;
       void this.playBackgroundMusic().catch(() => {
         // Intro may autoplay while music is blocked independently on some browsers.
       });
@@ -127,8 +151,9 @@ class AudioManager {
     } catch (error) {
       this.state.introPlaying = false;
       this.state.autoplayBlocked = true;
-      if (!isAutoplayBlocked(error)) {
-        this.state.introLoaded = true;
+      if (isAutoplayBlocked(error)) {
+        console.warn('autoplay blocked', error);
+      } else {
         this.warnMissingOrInvalid(this.getAudio('intro'), error);
       }
       this.restoreMusicVolume('intro-explanation');
@@ -137,30 +162,51 @@ class AudioManager {
     }
   }
 
-  async unlockAudio() {
+  getIntroAudio() {
+    return this.getAudio('intro').element;
+  }
+
+  getBackgroundMusic() {
+    return this.getAudio('backgroundMusic').element;
+  }
+
+  isIntroPlaying() {
+    return this.state.introPlaying;
+  }
+
+  setIntroPlaying(introPlaying: boolean) {
+    this.state.introPlaying = introPlaying;
+    this.emitState();
+  }
+
+  markAudioUnlocked() {
     this.state.audioUnlocked = true;
     this.state.autoplayBlocked = false;
     this.emitState();
+  }
 
-    const intro = this.getAudio('intro').element;
-    if (intro.readyState === HTMLMediaElement.HAVE_NOTHING) {
-      intro.load();
-    }
+  markMusicPlaying(isPlaying: boolean) {
+    this.state.musicPlaying = isPlaying;
+    this.emitState();
+  }
 
+  async unlockAudio() {
+    this.markAudioUnlocked();
     return this.playIntroExplanation();
   }
 
   async playIntroExplanation() {
-    if (this.state.introPlayed) {
+    if (this.state.introPlayed || this.state.introPlaying) {
       return;
     }
 
-    const intro = this.getAudio('intro').element;
+    const intro = this.getIntroAudio();
     intro.currentTime = 0;
     this.duckMusic('intro-explanation');
 
     try {
       await intro.play();
+      console.log('intro play called');
       this.state.introPlaying = true;
       this.emitState();
     } catch (error) {
@@ -171,7 +217,7 @@ class AudioManager {
   }
 
   async playBackgroundMusic() {
-    const music = this.getAudio('backgroundMusic').element;
+    const music = this.getBackgroundMusic();
     music.loop = true;
     music.volume = this.currentMusicVolume();
 
@@ -187,6 +233,7 @@ class AudioManager {
 
     try {
       await music.play();
+      console.log('background music play called');
       this.state.musicPlaying = true;
       this.emitState();
     } catch (error) {
@@ -200,7 +247,7 @@ class AudioManager {
   }
 
   pauseBackgroundMusic() {
-    const music = this.getAudio('backgroundMusic').element;
+    const music = this.getBackgroundMusic();
     music.pause();
     this.state.musicPlaying = false;
     this.emitState();
@@ -215,7 +262,7 @@ class AudioManager {
   }
 
   stopBackgroundMusic() {
-    const music = this.getAudio('backgroundMusic').element;
+    const music = this.getBackgroundMusic();
     music.pause();
     music.currentTime = 0;
     this.state.musicPlaying = false;
@@ -233,7 +280,7 @@ class AudioManager {
   }
 
   playWord(textOrAudioKey: string, options: WordAudioOptions = {}) {
-    if (textOrAudioKey === 'correct' || textOrAudioKey === 'wrong' || textOrAudioKey === 'intro') {
+    if (textOrAudioKey === 'intro') {
       return this.playManagedEffect(textOrAudioKey, options);
     }
 
@@ -273,8 +320,6 @@ class AudioManager {
     }
 
     this.activeUtterance = null;
-    this.getAudio('correct').element.pause();
-    this.getAudio('wrong').element.pause();
   }
 
   private async playManagedEffect(key: PlaybackAudioKey, options: WordAudioOptions) {
@@ -299,11 +344,11 @@ class AudioManager {
     }
 
     const config = AUDIO_SOURCES[key];
-    const element = new Audio(config.src);
+    const element = PRECREATED_AUDIO_ELEMENTS[key];
     element.preload = 'auto';
     if (key === 'backgroundMusic') {
       element.loop = true;
-      element.volume = this.currentMusicVolume();
+      element.volume = BACKGROUND_MUSIC_VOLUME;
     }
 
     const managed: ManagedAudio = {
@@ -317,10 +362,13 @@ class AudioManager {
     element.addEventListener('canplaythrough', () => {
       managed.loaded = true;
       if (key === 'intro') {
+        console.log('intro canplaythrough');
         this.state.introLoaded = true;
-        this.emitState();
+      } else {
+        console.log('background canplaythrough');
       }
-    }, { once: true });
+      this.emitState();
+    });
 
     element.addEventListener('loadeddata', () => {
       managed.loaded = true;
@@ -331,11 +379,14 @@ class AudioManager {
     }, { once: true });
 
     element.addEventListener('error', () => {
-      this.warnMissingOrInvalid(managed, element.error ?? undefined);
       if (key === 'intro') {
+        console.warn('Intro audio failed to load', element.src);
         this.state.introLoaded = true;
         this.emitState();
+      } else {
+        console.warn('Background music failed to load', element.src);
       }
+      this.warnMissingOrInvalid(managed, element.error ?? undefined);
     });
 
     if (key === 'intro') {
@@ -344,10 +395,13 @@ class AudioManager {
         this.emitState();
       });
       element.addEventListener('pause', () => {
-        this.state.introPlaying = false;
-        this.emitState();
+        if (!element.ended) {
+          this.state.introPlaying = false;
+          this.emitState();
+        }
       });
       element.addEventListener('ended', () => {
+        console.log('intro ended');
         this.state.introPlaying = false;
         this.state.introPlayed = true;
         this.restoreMusicVolume('intro-explanation');
@@ -389,8 +443,8 @@ class AudioManager {
     const pauseForHiddenPage = () => {
       this.state.isPageVisible = false;
 
-      const intro = this.getAudio('intro').element;
-      const music = this.getAudio('backgroundMusic').element;
+      const intro = this.getIntroAudio();
+      const music = this.getBackgroundMusic();
       this.introWasPlayingBeforeHidden = !intro.paused && !this.state.introPlayed;
       this.musicWasPlayingBeforeHidden = !music.paused;
       this.speechWasSpeakingBeforeHidden = 'speechSynthesis' in window && window.speechSynthesis.speaking;
@@ -412,7 +466,7 @@ class AudioManager {
           void this.resumeBackgroundMusic().catch(() => undefined);
         }
         if (this.introWasPlayingBeforeHidden && !this.state.introPlayed) {
-          void this.getAudio('intro').element.play().catch(() => undefined);
+          void this.getIntroAudio().play().catch(() => undefined);
         }
         if (this.speechWasSpeakingBeforeHidden && 'speechSynthesis' in window) {
           window.speechSynthesis.resume();

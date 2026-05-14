@@ -1,9 +1,8 @@
-import { attemptAutoplayIntro, audioManager, playBackgroundMusic, unlockAudio } from '../audio.js';
+import { attemptAutoplayIntro, audioManager } from '../audio.js';
 import { createElement, createImage } from '../dom.js';
 
-function isAutoplayBlocked(error: unknown) {
-  return error instanceof DOMException && error.name === 'NotAllowedError';
-}
+const DEBUG_UI = false;
+const START_FALLBACK_DELAY_MS = 350;
 
 type IntroScreenProps = {
   onStart: () => void;
@@ -11,8 +10,6 @@ type IntroScreenProps = {
 
 export function IntroScreen({ onStart }: IntroScreenProps) {
   let hasStartedGame = false;
-  let isStartingFromButton = false;
-  let unsubscribeState: () => void = () => undefined;
   let unsubscribeIntroEnded: () => void = () => undefined;
 
   const continueToGame = () => {
@@ -21,66 +18,73 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
     }
 
     hasStartedGame = true;
-    unsubscribeState();
     unsubscribeIntroEnded();
     onStart();
   };
+
+  const navigateToGameAfterShortFallback = () => {
+    window.setTimeout(continueToGame, START_FALLBACK_DELAY_MS);
+  };
+
+  async function handleStart() {
+    console.log('start hit-area clicked');
+
+    if (audioManager.isIntroPlaying()) {
+      return;
+    }
+
+    if (audioManager.state.introPlayed) {
+      continueToGame();
+      return;
+    }
+
+    audioManager.markAudioUnlocked();
+    audioManager.setIntroPlaying(true);
+
+    const introAudio = audioManager.getIntroAudio();
+    const bgMusic = audioManager.getBackgroundMusic();
+
+    try {
+      bgMusic.currentTime = bgMusic.currentTime || 0;
+      bgMusic.volume = 0.18;
+      await bgMusic.play();
+      audioManager.markMusicPlaying(true);
+      console.log('background music play called');
+    } catch (error) {
+      audioManager.markMusicPlaying(false);
+      console.warn('Background music could not play', error);
+    }
+
+    try {
+      introAudio.currentTime = 0;
+      bgMusic.volume = 0.08;
+      await introAudio.play();
+      console.log('intro play called');
+    } catch (error) {
+      console.warn('Intro audio could not play', error);
+      audioManager.setIntroPlaying(false);
+      bgMusic.volume = 0.18;
+      navigateToGameAfterShortFallback();
+    }
+  }
 
   const shell = createElement('main', 'game-shell');
   const stage = createElement('section', 'game-stage intro-stage');
   stage.setAttribute('aria-label', 'Introductie');
   stage.append(createImage('/assets/introscherm.png', '', 'intro-background-layer'));
 
-  const startButton = createElement('button', 'intro-start-hit-area');
+  const startButton = createElement(
+    'button',
+    DEBUG_UI ? 'intro-start-hit-area intro-start-hit-area--debug' : 'intro-start-hit-area',
+  );
   startButton.type = 'button';
   startButton.setAttribute('aria-label', 'Start Rijmmonster');
-  startButton.disabled = true;
-  startButton.hidden = true;
   startButton.addEventListener('click', () => {
-    if (isStartingFromButton || startButton.disabled) {
-      return;
-    }
-
-    isStartingFromButton = true;
-    startButton.disabled = true;
-    startButton.hidden = false;
-
-    void unlockAudio()
-      .then(() => playBackgroundMusic().catch(() => undefined))
-      .catch((error: unknown) => {
-        // Safari/iPad may still block audio. Keep the screen stable and allow another
-        // explicit tap without showing a technical error to children. Missing audio files
-        // are already warned by AudioManager; in that case continue so the app never crashes.
-        if (!isAutoplayBlocked(error)) {
-          continueToGame();
-          return;
-        }
-
-        isStartingFromButton = false;
-        startButton.disabled = false;
-        startButton.hidden = false;
-      });
+    void handleStart();
   });
 
   stage.append(startButton);
   shell.append(createElement('div', 'portrait-warning', 'Draai de iPad naar liggend beeld om Rijmmonster te spelen.'), stage);
-
-  unsubscribeState = audioManager.subscribe((state) => {
-    if (state.introPlayed) {
-      continueToGame();
-      return;
-    }
-
-    if (state.introPlaying) {
-      startButton.hidden = true;
-      startButton.disabled = true;
-      return;
-    }
-
-    const canStartByButton = state.introLoaded && state.autoplayBlocked && !isStartingFromButton;
-    startButton.hidden = !canStartByButton;
-    startButton.disabled = !canStartByButton;
-  });
 
   unsubscribeIntroEnded = audioManager.onIntroEnded(continueToGame);
 
