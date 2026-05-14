@@ -1,3 +1,4 @@
+import { INSTRUCTION_BG_SRC, SPEAKER_BUTTON_SRC } from '../assets.js';
 import type { RhymeTask } from '../data/gameData.js';
 import { createElement, createImage } from '../dom.js';
 
@@ -23,12 +24,13 @@ function splitRhyme(prompt: string, rhymePart: string) {
 export function InstructionBar({ task, onReplay, disabled = false }: InstructionBarProps) {
   const bar = createElement('section', 'instruction-bar');
   bar.setAttribute('aria-label', 'Opdracht');
+  bar.style.setProperty('--instruction-bg-src', `url("${INSTRUCTION_BG_SRC}")`);
 
   const speakerButton = createElement('button', 'speaker-button');
   speakerButton.type = 'button';
   speakerButton.disabled = disabled;
   speakerButton.setAttribute('aria-label', 'Luister nog een keer');
-  speakerButton.append(createImage('/assets/knop_geluid.png'));
+  speakerButton.append(createImage(SPEAKER_BUTTON_SRC));
   speakerButton.addEventListener('click', onReplay);
 
   const copy = createElement('div', 'instruction-copy');

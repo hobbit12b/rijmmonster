@@ -3,14 +3,9 @@ import {
   BG_MUSIC_SRC,
   INTRO_AUDIO_SRC,
   audioManager,
-  isAudioSourceUnavailable,
-  isAutoplayBlockedError,
 } from '../audio.js';
+import { INTRO_BG_SRC, INTRO_BUTTON_SRC } from '../assets.js';
 import { createElement, createImage } from '../dom.js';
-
-const START_FALLBACK_DELAY_MS = 1200;
-const INTRO_BACKGROUND_SRC = '/assets/introscherm_zonder_startknop.png';
-const INTRO_START_BUTTON_SRC = '/assets/introscherm_startknop.png';
 
 type IntroScreenProps = {
   onStart: () => void;
@@ -20,27 +15,12 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
   console.log('IntroScreen mounted');
   console.log('INTRO_AUDIO_SRC', INTRO_AUDIO_SRC);
   console.log('BG_MUSIC_SRC', BG_MUSIC_SRC);
+  console.log('INTRO_BG_SRC', INTRO_BG_SRC);
+  console.log('INTRO_BUTTON_SRC', INTRO_BUTTON_SRC);
 
   let hasStartedGame = false;
   let introStarted = false;
   let unsubscribeIntroEnded: () => void = () => undefined;
-
-  const continueToGame = () => {
-    if (hasStartedGame) {
-      return;
-    }
-
-    console.log('intro ended, navigating to game');
-    hasStartedGame = true;
-    startButton.disabled = true;
-    audioManager.getBackgroundMusic().volume = BACKGROUND_MUSIC_VOLUME;
-    unsubscribeIntroEnded();
-    onStart();
-  };
-
-  const navigateToGameAfterShortFallback = () => {
-    window.setTimeout(continueToGame, START_FALLBACK_DELAY_MS);
-  };
 
   const showStartButton = () => {
     if (hasStartedGame) {
@@ -56,8 +36,24 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
     startButton.hidden = true;
   };
 
+  const continueToGame = () => {
+    if (hasStartedGame) {
+      return;
+    }
+
+    console.log('intro ended, navigating to game');
+    hasStartedGame = true;
+    hideStartButton();
+    audioManager.restoreMusicVolume('intro-explanation');
+    audioManager.getBackgroundMusic().volume = BACKGROUND_MUSIC_VOLUME;
+    unsubscribeIntroEnded();
+    onStart();
+  };
+
   const startBackgroundMusicSoftly = async () => {
     audioManager.duckMusic('intro-explanation');
+    console.log('background music play requested');
+
     try {
       await audioManager.playBackgroundMusic();
       console.log('background music started');
@@ -84,26 +80,15 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
     await startBackgroundMusicSoftly();
 
     try {
+      console.log('intro audio play requested');
       await introAudio.play();
       console.log('intro audio started');
     } catch (error) {
       audioManager.setIntroPlaying(false);
       audioManager.restoreMusicVolume('intro-explanation');
       introStarted = false;
-
-      if (isAutoplayBlockedError(error)) {
-        console.log('autoplay blocked, waiting for start');
-        showStartButton();
-        return;
-      }
-
-      if (isAudioSourceUnavailable(introAudio, error)) {
-        console.warn('Intro audio could not be loaded; continuing to game after fallback delay.', error);
-        navigateToGameAfterShortFallback();
-        return;
-      }
-
-      console.warn('Intro audio could not play; waiting for start button.', error);
+      console.log('intro audio failed', error);
+      console.warn('intro audio failed', error);
       showStartButton();
     }
   }
@@ -112,7 +97,7 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
   const stage = createElement('section', 'game-stage intro-stage');
   stage.setAttribute('aria-label', 'Introductie');
 
-  const background = createImage(INTRO_BACKGROUND_SRC, '', 'intro-background-layer');
+  const background = createImage(INTRO_BG_SRC, '', 'intro-background-layer');
   background.addEventListener('load', () => console.log('Intro background loaded'), { once: true });
   stage.append(background);
 
@@ -120,7 +105,7 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
   startButton.type = 'button';
   startButton.setAttribute('aria-label', 'Start Rijmmonster');
 
-  const startButtonImage = createImage(INTRO_START_BUTTON_SRC, '', 'intro-start-button-image');
+  const startButtonImage = createImage(INTRO_BUTTON_SRC, '', 'intro-start-button-image');
   startButtonImage.addEventListener('load', () => console.log('Start button loaded'), { once: true });
   startButton.append(startButtonImage);
 
@@ -128,43 +113,18 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
     void handleStart();
   });
 
+  audioManager.getIntroAudio().addEventListener('error', () => {
+    console.warn('Intro audio failed to load');
+    introStarted = false;
+    audioManager.setIntroPlaying(false);
+    audioManager.restoreMusicVolume('intro-explanation');
+    showStartButton();
+  });
+
   stage.append(startButton);
   shell.append(createElement('div', 'portrait-warning', 'Draai de iPad naar liggend beeld om Rijmmonster te spelen.'), stage);
 
   unsubscribeIntroEnded = audioManager.onIntroEnded(continueToGame);
-
-  window.setTimeout(() => {
-    console.log('Attempting intro autoplay');
-    audioManager.attemptAutoplayIntro().then((autoplayStarted) => {
-      if (autoplayStarted) {
-        introStarted = true;
-        hideStartButton();
-        return;
-      }
-
-      if (audioManager.state.autoplayBlocked) {
-        console.log('autoplay blocked, waiting for start');
-        showStartButton();
-        return;
-      }
-
-      const introAudio = audioManager.getIntroAudio();
-      if (audioManager.state.introUnavailable || isAudioSourceUnavailable(introAudio, introAudio.error ?? undefined)) {
-        console.warn('Intro audio could not be loaded; continuing to game after fallback delay.', introAudio.error);
-        hideStartButton();
-        navigateToGameAfterShortFallback();
-      }
-    }).catch((error) => {
-      if (isAutoplayBlockedError(error)) {
-        console.log('autoplay blocked, waiting for start');
-        showStartButton();
-        return;
-      }
-
-      console.warn('Intro autoplay failed unexpectedly; waiting for start button.', error);
-      showStartButton();
-    });
-  }, 0);
 
   return shell;
 }

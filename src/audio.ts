@@ -1,5 +1,7 @@
-export const INTRO_AUDIO_SRC = '/assets/intro-rijmen.mp3';
-export const BG_MUSIC_SRC = '/assets/background-music.mp3';
+import { assetPath } from './assets.js';
+
+export const INTRO_AUDIO_SRC = assetPath('assets/intro-rijmen.mp3');
+export const BG_MUSIC_SRC = assetPath('assets/background-music.mp3');
 
 export const BACKGROUND_MUSIC_VOLUME = 0.18;
 export const DUCKED_BACKGROUND_MUSIC_VOLUME = 0.08;
@@ -144,46 +146,6 @@ class AudioManager {
         this.warnMissingOrInvalid(managed, error);
       }
     });
-  }
-
-  async attemptAutoplayIntro() {
-    this.preloadAudio();
-
-    if (this.state.introPlayed || this.state.introPlaying) {
-      return false;
-    }
-
-    const intro = this.getIntroAudio();
-
-    try {
-      intro.currentTime = 0;
-      this.duckMusic('intro-explanation');
-      await intro.play();
-      console.log('intro audio started');
-      this.state.audioUnlocked = true;
-      this.state.autoplayBlocked = false;
-      this.state.introUnavailable = false;
-      this.state.introPlaying = true;
-      void this.playBackgroundMusic().then(() => {
-        console.log('background music started');
-      }).catch(() => {
-        // Intro may autoplay while music is blocked independently on some browsers.
-      });
-      this.emitState();
-      return true;
-    } catch (error) {
-      this.state.introPlaying = false;
-      this.state.autoplayBlocked = isAutoplayBlockedError(error);
-      this.state.introUnavailable = isAudioSourceUnavailable(intro, error);
-      if (isAutoplayBlockedError(error)) {
-        console.log('autoplay blocked, waiting for start');
-      } else {
-        this.warnMissingOrInvalid(this.getAudio('intro'), error);
-      }
-      this.restoreMusicVolume('intro-explanation');
-      this.emitState();
-      return false;
-    }
   }
 
   getIntroAudio() {
@@ -523,9 +485,6 @@ export function preloadAudio() {
   audioManager.preloadAudio();
 }
 
-export function attemptAutoplayIntro() {
-  return audioManager.attemptAutoplayIntro();
-}
 
 export function unlockAudio() {
   return audioManager.unlockAudio();

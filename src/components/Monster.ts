@@ -1,12 +1,13 @@
+import { assetPath } from '../assets.js';
 import { createElement, createImage } from '../dom.js';
 
 export type MonsterPose = 'idle' | 'listening' | 'happy' | 'oops';
 
 const poseAssets: Record<MonsterPose, string> = {
-  idle: '/assets/idle.png',
-  listening: '/assets/luisteren2.png',
-  happy: '/assets/blij.png',
-  oops: '/assets/twijfel.png',
+  idle: assetPath('assets/idle.png'),
+  listening: assetPath('assets/luisteren2.png'),
+  happy: assetPath('assets/blij.png'),
+  oops: assetPath('assets/twijfel.png'),
 };
 
 const poseLabels: Record<MonsterPose, string> = {

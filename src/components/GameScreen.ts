@@ -1,3 +1,4 @@
+import { BACKGROUND_STAGE_SRC, HOME_BUTTON_SRC, SETTINGS_BUTTON_SRC } from '../assets.js';
 import { audioManager, duckMusic, playBackgroundMusic, restoreMusicVolume, type WordAudioOptions } from '../audio.js';
 import { gameData } from '../data/gameData.js';
 import { createElement, createImage } from '../dom.js';
@@ -10,6 +11,7 @@ const LISTENING_GAP_MS = 420;
 const FEEDBACK_MS = 620;
 const NEXT_ROUND_DELAY_MS = 120;
 const GAME_SPEECH_DUCK_REASON = 'game-speech';
+const HEART_SLOT_COUNT = 5;
 
 type Feedback = 'correct' | 'wrong' | null;
 
@@ -167,7 +169,7 @@ export class GameScreen {
         this.queueTimer(() => {
           if (isCorrect) {
             this.setState(() => {
-              this.progress = Math.min(gameData.length, this.progress + 1);
+              this.progress = Math.min(HEART_SLOT_COUNT, this.progress + 1);
               this.taskIndex = (this.taskIndex + 1) % gameData.length;
               this.feedback = null;
               this.selectedAnswer = null;
@@ -193,17 +195,17 @@ export class GameScreen {
 
   private render() {
     const stage = createElement('div', 'game-stage');
-    stage.append(createImage('/assets/achtergrond.png', '', 'background-layer'));
+    stage.append(createImage(BACKGROUND_STAGE_SRC, '', 'background-layer'));
 
     const homeButton = createElement('button', 'corner-button corner-button--home');
     homeButton.type = 'button';
     homeButton.setAttribute('aria-label', 'Home');
-    homeButton.append(createImage('/assets/knop_home.png'));
+    homeButton.append(createImage(HOME_BUTTON_SRC));
 
     const settingsButton = createElement('button', 'corner-button corner-button--settings');
     settingsButton.type = 'button';
     settingsButton.setAttribute('aria-label', 'Instellingen');
-    settingsButton.append(createImage('/assets/knop_instellingen.png'));
+    settingsButton.append(createImage(SETTINGS_BUTTON_SRC));
 
     const playArea = createElement('div', 'play-area');
     playArea.setAttribute('aria-live', 'polite');
@@ -228,7 +230,7 @@ export class GameScreen {
       settingsButton,
       InstructionBar({ task: this.task, onReplay: this.replayPrompt, disabled: this.isPlayingAudio }),
       playArea,
-      ProgressBar({ current: this.progress, total: gameData.length }),
+      ProgressBar({ current: this.progress, total: HEART_SLOT_COUNT }),
     );
 
     const shell = createElement('main', 'game-shell');

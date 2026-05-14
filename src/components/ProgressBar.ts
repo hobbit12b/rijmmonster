@@ -1,3 +1,4 @@
+import { CANDY_JAR_SRC, FILLED_HEART_SRC } from '../assets.js';
 import { createElement, createImage } from '../dom.js';
 
 type ProgressBarProps = {
@@ -6,14 +7,24 @@ type ProgressBarProps = {
 };
 
 export function ProgressBar({ current, total }: ProgressBarProps) {
+  const filledCount = Math.max(0, Math.min(current, total));
   const group = createElement('section', 'progress-group');
-  group.setAttribute('aria-label', `Voortgang ${current} van ${total}`);
+  group.setAttribute('aria-label', `Voortgang ${filledCount} van ${total}`);
 
   const heartTrack = createElement('div', 'heart-track');
-  const heartFill = createElement('div', 'heart-fill');
-  heartFill.style.width = `${Math.min(100, (current / total) * 100)}%`;
-  heartTrack.append(createImage('/assets/hartjesstatus.png'), heartFill);
+  heartTrack.setAttribute('aria-hidden', 'true');
 
-  group.append(createImage('/assets/snoeppot.png', 'Snoeppot', 'candy-jar'), heartTrack);
+  for (let index = 0; index < total; index += 1) {
+    const slot = createElement('div', `heart-slot${index < filledCount ? ' heart-slot--filled' : ''}`);
+
+    if (index < filledCount) {
+      const heart = createImage(FILLED_HEART_SRC, '', `heart-status-image${index === filledCount - 1 ? ' heart-status-image--new' : ''}`);
+      slot.append(heart);
+    }
+
+    heartTrack.append(slot);
+  }
+
+  group.append(createImage(CANDY_JAR_SRC, 'Snoeppot', 'candy-jar'), heartTrack);
   return group;
 }

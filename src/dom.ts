@@ -18,7 +18,7 @@ export function createElement<K extends keyof HTMLElementTagNameMap>(
 
 export function createImage(src: string, alt = '', className?: string) {
   const image = document.createElement('img');
-  image.src = src.startsWith('/') ? src.slice(1) : src;
+  image.src = src;
   image.alt = alt;
   image.draggable = false;
 
