@@ -29,6 +29,7 @@ type AudioManagerState = {
   introPlayed: boolean;
   musicPlaying: boolean;
   autoplayBlocked: boolean;
+  introUnavailable: boolean;
   isPageVisible: boolean;
 };
 
@@ -62,8 +63,25 @@ function isPageVisible() {
   return document.visibilityState !== 'hidden';
 }
 
-function isAutoplayBlocked(error: unknown) {
+export function isAutoplayBlockedError(error: unknown) {
   return error instanceof DOMException && error.name === 'NotAllowedError';
+}
+
+export function isAudioSourceUnavailable(element: HTMLAudioElement, error?: unknown) {
+  const mediaSourceNotSupported = 4;
+  if (element.error) {
+    return element.error.code === mediaSourceNotSupported;
+  }
+
+  if (error instanceof DOMException) {
+    return error.name === 'NotSupportedError';
+  }
+
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    return Number((error as { code: unknown }).code) === mediaSourceNotSupported;
+  }
+
+  return false;
 }
 
 class AudioManager {
@@ -74,6 +92,7 @@ class AudioManager {
     introPlayed: false,
     musicPlaying: false,
     autoplayBlocked: false,
+    introUnavailable: false,
     isPageVisible: isPageVisible(),
   };
 
@@ -135,13 +154,14 @@ class AudioManager {
     }
 
     const intro = this.getIntroAudio();
-    console.log('autoplay attempt');
 
     try {
       this.duckMusic('intro-explanation');
+      console.log('Intro audio play called');
       await intro.play();
       this.state.audioUnlocked = true;
       this.state.autoplayBlocked = false;
+      this.state.introUnavailable = false;
       this.state.introPlaying = true;
       void this.playBackgroundMusic().catch(() => {
         // Intro may autoplay while music is blocked independently on some browsers.
@@ -150,9 +170,10 @@ class AudioManager {
       return true;
     } catch (error) {
       this.state.introPlaying = false;
-      this.state.autoplayBlocked = true;
-      if (isAutoplayBlocked(error)) {
-        console.warn('autoplay blocked', error);
+      this.state.autoplayBlocked = isAutoplayBlockedError(error);
+      this.state.introUnavailable = isAudioSourceUnavailable(intro, error);
+      if (isAutoplayBlockedError(error)) {
+        console.log('Autoplay blocked, waiting for start button');
       } else {
         this.warnMissingOrInvalid(this.getAudio('intro'), error);
       }
@@ -206,7 +227,7 @@ class AudioManager {
 
     try {
       await intro.play();
-      console.log('intro play called');
+      console.log('Intro audio play called');
       this.state.introPlaying = true;
       this.emitState();
     } catch (error) {
@@ -233,11 +254,11 @@ class AudioManager {
 
     try {
       await music.play();
-      console.log('background music play called');
+      console.log('Background music play called');
       this.state.musicPlaying = true;
       this.emitState();
     } catch (error) {
-      if (!isAutoplayBlocked(error)) {
+      if (!isAutoplayBlockedError(error)) {
         this.warnMissingOrInvalid(this.getAudio('backgroundMusic'), error);
       }
       this.state.musicPlaying = false;
@@ -364,6 +385,7 @@ class AudioManager {
       if (key === 'intro') {
         console.log('intro canplaythrough');
         this.state.introLoaded = true;
+        this.state.introUnavailable = false;
       } else {
         console.log('background canplaythrough');
       }
@@ -374,6 +396,7 @@ class AudioManager {
       managed.loaded = true;
       if (key === 'intro') {
         this.state.introLoaded = true;
+        this.state.introUnavailable = false;
         this.emitState();
       }
     }, { once: true });
@@ -382,6 +405,7 @@ class AudioManager {
       if (key === 'intro') {
         console.warn('Intro audio failed to load', element.src);
         this.state.introLoaded = true;
+        this.state.introUnavailable = true;
         this.emitState();
       } else {
         console.warn('Background music failed to load', element.src);
@@ -401,7 +425,7 @@ class AudioManager {
         }
       });
       element.addEventListener('ended', () => {
-        console.log('intro ended');
+        console.log('Intro audio ended');
         this.state.introPlaying = false;
         this.state.introPlayed = true;
         this.restoreMusicVolume('intro-explanation');
