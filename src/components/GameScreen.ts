@@ -69,7 +69,8 @@ export class GameScreen {
       this.activeSpokenOption = null;
     });
 
-    this.speech.speak(`Welk woord klinkt hetzelfde aan het eind als ${this.task.prompt}?`, {
+    this.speech.speak('Wat rijmt?', {
+      rate: 0.92,
       onEnd: () => this.queueTimer(() => this.speakOptionsFrom(0), LISTENING_GAP_MS),
     });
   }
@@ -86,17 +87,16 @@ export class GameScreen {
       this.activeSpokenOption = index;
     });
 
-    const optionText = index === 0 ? `${this.task.prompt} ${option.label}` : `of ${this.task.prompt} ${option.label}`;
+    const optionText = `${this.task.prompt}, ${option.label}.`;
 
     this.speech.speak(optionText, {
+      rate: 0.92,
       onEnd: () => this.queueTimer(() => this.speakOptionsFrom(index + 1), LISTENING_GAP_MS),
     });
   }
 
   private playFullPrompt = () => {
-    this.speech.speak(this.task.prompt, {
-      onEnd: () => this.queueTimer(() => this.speakQuestion(), LISTENING_GAP_MS),
-    });
+    this.speakQuestion();
   };
 
   private playRoundAudio = () => {

@@ -1,4 +1,5 @@
 @import url('./components/GameScreen.css');
+@import url('./components/IntroScreen.css');
 @import url('./components/InstructionBar.css');
 @import url('./components/Monster.css');
 @import url('./components/AnswerButton.css');
