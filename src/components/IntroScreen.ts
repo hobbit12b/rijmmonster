@@ -31,17 +31,9 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
   stage.setAttribute('aria-label', 'Introductie');
   stage.append(createImage('/assets/introscherm.png', '', 'intro-background-layer'));
 
-  const overlay = createElement('div', 'intro-controls');
-
-  const loader = createElement('div', 'intro-loader');
-  loader.setAttribute('aria-label', 'Audio laden');
-  loader.setAttribute('role', 'status');
-
-  const loaderDot = createElement('span', 'intro-loader-dot');
-  loader.append(loaderDot);
-
-  const startButton = createElement('button', 'intro-start-button', 'start');
+  const startButton = createElement('button', 'intro-start-hit-area');
   startButton.type = 'button';
+  startButton.setAttribute('aria-label', 'Start Rijmmonster');
   startButton.disabled = true;
   startButton.hidden = true;
   startButton.addEventListener('click', () => {
@@ -51,8 +43,7 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
 
     isStartingFromButton = true;
     startButton.disabled = true;
-    startButton.hidden = true;
-    loader.hidden = false;
+    startButton.hidden = false;
 
     void unlockAudio()
       .then(() => playBackgroundMusic().catch(() => undefined))
@@ -68,12 +59,10 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
         isStartingFromButton = false;
         startButton.disabled = false;
         startButton.hidden = false;
-        loader.hidden = true;
       });
   });
 
-  overlay.append(loader, startButton);
-  stage.append(overlay);
+  stage.append(startButton);
   shell.append(createElement('div', 'portrait-warning', 'Draai de iPad naar liggend beeld om Rijmmonster te spelen.'), stage);
 
   unsubscribeState = audioManager.subscribe((state) => {
@@ -85,14 +74,12 @@ export function IntroScreen({ onStart }: IntroScreenProps) {
     if (state.introPlaying) {
       startButton.hidden = true;
       startButton.disabled = true;
-      loader.hidden = true;
       return;
     }
 
     const canStartByButton = state.introLoaded && state.autoplayBlocked && !isStartingFromButton;
     startButton.hidden = !canStartByButton;
     startButton.disabled = !canStartByButton;
-    loader.hidden = state.introLoaded || state.introPlaying;
   });
 
   unsubscribeIntroEnded = audioManager.onIntroEnded(continueToGame);
