@@ -1,7 +1,6 @@
-import { duckBackgroundMusic, restoreBackgroundMusic, startBackgroundMusic } from '../audio.js';
+import { audioManager, duckMusic, playBackgroundMusic, restoreMusicVolume, type WordAudioOptions } from '../audio.js';
 import { gameData } from '../data/gameData.js';
 import { createElement, createImage } from '../dom.js';
-import { createSpeechController } from '../hooks/useSpeech.js';
 import { AnswerButton } from './AnswerButton.js';
 import { InstructionBar } from './InstructionBar.js';
 import { Monster, type MonsterPose } from './Monster.js';
@@ -16,7 +15,6 @@ type Feedback = 'correct' | 'wrong' | null;
 
 export class GameScreen {
   private readonly root: HTMLElement;
-  private readonly speech = createSpeechController();
   private timers: number[] = [];
   private taskIndex = 0;
   private progress = 0;
@@ -31,7 +29,7 @@ export class GameScreen {
   }
 
   mount() {
-    void startBackgroundMusic().catch(() => {
+    void playBackgroundMusic().catch(() => {
       // The intro start button normally unlocks audio. If not, speech still works and
       // another user gesture can resume the shared music instance later.
     });
@@ -70,15 +68,15 @@ export class GameScreen {
     });
   }
 
-  private speak(text: string, options: Parameters<typeof this.speech.speak>[1] = {}) {
-    this.speech.speak(text, {
+  private speak(text: string, options: WordAudioOptions = {}) {
+    audioManager.playWord(text, {
       ...options,
       onStart: () => {
-        duckBackgroundMusic(GAME_SPEECH_DUCK_REASON);
+        duckMusic(GAME_SPEECH_DUCK_REASON);
         options.onStart?.();
       },
       onEnd: () => {
-        restoreBackgroundMusic(GAME_SPEECH_DUCK_REASON);
+        restoreMusicVolume(GAME_SPEECH_DUCK_REASON);
         options.onEnd?.();
       },
     });
@@ -152,8 +150,8 @@ export class GameScreen {
 
     const isCorrect = this.task.options[index].correct;
 
-    this.speech.stop();
-    restoreBackgroundMusic(GAME_SPEECH_DUCK_REASON);
+    audioManager.stopWordAudio();
+    restoreMusicVolume(GAME_SPEECH_DUCK_REASON);
     this.clearTimers();
     this.setState(() => {
       this.selectedAnswer = index;
