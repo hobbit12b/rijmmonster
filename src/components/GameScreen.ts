@@ -1,10 +1,10 @@
-import { gameData } from '../data/gameData';
-import { createElement, createImage } from '../dom';
-import { createSpeechController } from '../hooks/useSpeech';
-import { AnswerButton } from './AnswerButton';
-import { InstructionBar } from './InstructionBar';
-import { Monster, type MonsterPose } from './Monster';
-import { ProgressBar } from './ProgressBar';
+import { gameData } from '../data/gameData.js';
+import { createElement, createImage } from '../dom.js';
+import { createSpeechController } from '../hooks/useSpeech.js';
+import { AnswerButton } from './AnswerButton.js';
+import { InstructionBar } from './InstructionBar.js';
+import { Monster, type MonsterPose } from './Monster.js';
+import { ProgressBar } from './ProgressBar.js';
 
 const SHOW_DEBUG_LABELS = true;
 const LISTENING_GAP_MS = 420;

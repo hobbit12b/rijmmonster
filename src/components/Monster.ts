@@ -1,4 +1,4 @@
-import { createElement, createImage } from '../dom';
+import { createElement, createImage } from '../dom.js';
 
 export type MonsterPose = 'idle' | 'listening' | 'happy' | 'oops';
 

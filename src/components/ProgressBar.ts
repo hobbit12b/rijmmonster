@@ -1,4 +1,4 @@
-import { createElement, createImage } from '../dom';
+import { createElement, createImage } from '../dom.js';
 
 type ProgressBarProps = {
   current: number;
