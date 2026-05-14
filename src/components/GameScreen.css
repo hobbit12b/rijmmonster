@@ -71,9 +71,9 @@
 
 .answer-row {
   position: absolute;
-  left: 18.5%;
-  right: 18.5%;
-  bottom: -0.2%;
+  left: 4%;
+  right: 4%;
+  bottom: 4%;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
