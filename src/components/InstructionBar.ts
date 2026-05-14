@@ -38,7 +38,7 @@ export function InstructionBar({ task, onReplay, disabled = false }: Instruction
   const { start, rhyme } = splitRhyme(task.prompt, task.rhymePart);
   promptWord.append(createElement('span', undefined, start));
   promptWord.append(createElement('span', 'rhyme-part', rhyme));
-  copy.append(promptWord, createElement('p', undefined, 'Welk woord klinkt hetzelfde aan het einde?'));
+  copy.append(promptWord, createElement('p', undefined, 'Wat rijmt?'));
 
   bar.append(speakerButton, copy);
   return bar;
